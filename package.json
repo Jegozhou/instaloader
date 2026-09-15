@@ -1,0 +1,22 @@
+{
+  "name": "workbuddy-instagram-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native WorkBuddy MCP App for the Instaloader download engine.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test:node": "node --test test/workbuddy-*.test.mjs",
+    "test:bridge": "python -m unittest discover -s test -p test_workbench_bridge.py"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "esbuild": "^0.28.2",
+    "preact": "^10.29.8",
+    "zod": "^4.4.3"
+  }
+}
