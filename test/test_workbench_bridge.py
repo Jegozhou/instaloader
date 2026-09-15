@@ -26,6 +26,14 @@ class TestWorkbenchBridgeValidation(unittest.TestCase):
             })
         self.assertEqual(error.exception.code, "AUTH_REQUIRED")
 
+    def test_hashtag_requires_authenticated_mode(self):
+        with self.assertRaises(BridgeError) as error:
+            normalize_download_request({
+                "targets": [{"type": "hashtag", "value": "#kitten"}],
+                "auth": {"mode": "anonymous"},
+            })
+        self.assertEqual(error.exception.code, "AUTH_REQUIRED")
+
     def test_login_required_content_is_rejected_for_anonymous_mode(self):
         for option in ("stories", "highlights", "comments", "geotags"):
             with self.subTest(option=option):
@@ -154,6 +162,11 @@ class FakeLoader:
     def close(self):
         self.calls.append(("close",))
 
+    def check_profile_id(self, username, latest_stamps=None):
+        profile = object()
+        self.calls.append(("check_profile_id", username, latest_stamps, profile))
+        return profile
+
     def download_profiles(self, *args, **kwargs):
         self.calls.append(("download_profiles", args, kwargs))
 
@@ -171,6 +184,12 @@ class FakeLoader:
 
     def download_saved_posts(self, *args, **kwargs):
         self.calls.append(("download_saved_posts", args, kwargs))
+
+
+class MissingProfileLoader(FakeLoader):
+    def check_profile_id(self, username, latest_stamps=None):
+        del latest_stamps
+        raise ProfileNotExistsException("{} not found".format(username))
 
 
 class TestWorkbenchBridgeAuthentication(unittest.TestCase):
@@ -240,12 +259,11 @@ class TestWorkbenchBridgeExecution(unittest.TestCase):
         }
         events = []
 
-        with patch("instaloader.workbench_bridge.Profile.from_username", return_value=object()):
-            result = execute_download(
-                request,
-                loader_factory=FakeLoader,
-                event_sink=lambda event, data: events.append((event, data)),
-            )
+        result = execute_download(
+            request,
+            loader_factory=FakeLoader,
+            event_sink=lambda event, data: events.append((event, data)),
+        )
 
         loader = FakeLoader.instances[-1]
         self.assertTrue(loader.kwargs["download_comments"])
@@ -255,7 +273,8 @@ class TestWorkbenchBridgeExecution(unittest.TestCase):
         self.assertIsNone(loader.kwargs["resume_prefix"])
         self.assertTrue(loader.kwargs["sanitize_paths"])
         self.assertTrue(loader.kwargs["dirname_pattern"].endswith("{target}"))
-        self.assertTrue(any(call[0] == "download_profiles" for call in loader.calls))
+        profile_call = next(call for call in loader.calls if call[0] == "download_profiles")
+        self.assertTrue(profile_call[2]["raise_errors"])
         stages = [data["stage"] for event, data in events if event == "progress"]
         self.assertEqual(stages, ["准备任务", "验证身份", "解析目标", "下载中", "保存元数据", "完成"])
         self.assertEqual(result["status"], "completed")
@@ -273,7 +292,7 @@ class TestWorkbenchBridgeExecution(unittest.TestCase):
             with self.subTest(target_type=target_type):
                 FakeLoader.instances = []
                 auth = {"mode": "anonymous"}
-                if target_type in ("feed", "stories", "saved"):
+                if target_type in ("hashtag", "feed", "stories", "saved"):
                     auth = {"mode": "session", "username": "tester"}
                 request = {
                     "targets": [{"type": target_type, "value": value}],
@@ -289,12 +308,8 @@ class TestWorkbenchBridgeExecution(unittest.TestCase):
             "targets": [{"type": "profile", "value": "missingprofile"}],
             "auth": {"mode": "anonymous"},
         }
-        with patch(
-            "instaloader.workbench_bridge.Profile.from_username",
-            side_effect=ProfileNotExistsException("not found"),
-        ):
-            with self.assertRaises(BridgeError) as error:
-                execute_download(request, loader_factory=FakeLoader)
+        with self.assertRaises(BridgeError) as error:
+            execute_download(request, loader_factory=MissingProfileLoader)
         self.assertEqual(error.exception.code, "TARGET_NOT_FOUND")
 
 
