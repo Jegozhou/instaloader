@@ -12,15 +12,15 @@ const currentDirectory = dirname(fileURLToPath(import.meta.url))
 const pluginRoot = resolve(currentDirectory, '..')
 const APP_ONLY_META = { ui: { resourceUri: APP_URI, visibility: ['app'] } }
 
-const AuthSchema = z.object({
+const AuthShape = {
   mode: z.enum(['anonymous', 'session', 'browser']).default('anonymous'),
   username: z.string().nullable().optional(),
   sessionFile: z.string().nullable().optional(),
   browser: z.string().nullable().optional(),
   cookieFile: z.string().nullable().optional(),
-})
+}
 
-const DownloadRequestSchema = z.object({
+const DownloadRequestShape = {
   targets: z.array(z.object({
     type: z.enum(['profile', 'hashtag', 'shortcode', 'feed', 'stories', 'saved']),
     value: z.string(),
@@ -52,8 +52,8 @@ const DownloadRequestSchema = z.object({
     sanitizePaths: z.boolean().optional(),
     resume: z.boolean().optional(),
   }).optional(),
-  auth: AuthSchema.optional(),
-})
+  auth: z.object(AuthShape).optional(),
+}
 
 function toolResult(result, successText) {
   const failed = result.final?.event === 'failed'
@@ -79,7 +79,7 @@ export function createServer(options = {}) {
   server.registerTool('show_instagram_workbench', {
     title: '打开 Instagram 下载工作台',
     description: '打开本机运行的 Instaloader 图形工作台，用于配置下载目标、身份模式、筛选条件和保存方式。',
-    inputSchema: z.object({}),
+    inputSchema: {},
     _meta: { ui: { resourceUri: APP_URI } },
   }, async () => ({
     content: [{
@@ -97,7 +97,7 @@ export function createServer(options = {}) {
   server.registerTool('instagram_validate_request', {
     title: '验证 Instagram 下载任务',
     description: '在不开始下载的情况下验证工作台任务配置。',
-    inputSchema: DownloadRequestSchema,
+    inputSchema: DownloadRequestShape,
     _meta: APP_ONLY_META,
   }, async (request) => toolResult(
     await run({ command: 'validate', request }),
@@ -107,7 +107,7 @@ export function createServer(options = {}) {
   server.registerTool('instagram_account_status', {
     title: '验证 Instagram 身份状态',
     description: '验证匿名、Instaloader session 文件或浏览器 Cookie 登录状态，只返回安全的账号摘要。',
-    inputSchema: AuthSchema,
+    inputSchema: AuthShape,
     _meta: APP_ONLY_META,
   }, async (auth) => toolResult(
     await run({ command: 'account_status', auth }),
@@ -117,7 +117,7 @@ export function createServer(options = {}) {
   server.registerTool('instagram_start_download', {
     title: '开始 Instagram 下载任务',
     description: '通过本机 Instaloader 引擎执行已经确认的下载任务。',
-    inputSchema: DownloadRequestSchema,
+    inputSchema: DownloadRequestShape,
     _meta: APP_ONLY_META,
   }, async (request) => toolResult(
     await run({ command: 'download', request }),
