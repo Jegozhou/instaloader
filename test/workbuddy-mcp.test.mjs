@@ -25,6 +25,21 @@ function fakeSpawn({ stdout = '', stderr = '', code = 0 }) {
 }
 
 
+function abortableSpawn() {
+  let killed = false
+  const child = new EventEmitter()
+  child.stdout = new PassThrough()
+  child.stderr = new PassThrough()
+  child.stdin = new Writable({ write(_chunk, _encoding, callback) { callback() } })
+  child.kill = () => {
+    killed = true
+    child.emit('close', null)
+    return true
+  }
+  return { child, wasKilled: () => killed }
+}
+
+
 test('MCP contract uses the WorkBuddy app resource and four tools', () => {
   assert.equal(APP_URI, 'ui://instagram-workbench/dashboard')
   assert.equal(APP_MIME, 'text/html;profile=mcp-app')
@@ -126,6 +141,20 @@ test('malformed child output becomes a safe INTERNAL_ERROR', async () => {
   assert.equal(result.final.data.code, 'INTERNAL_ERROR')
   assert.match(result.final.data.message, /invalid structured output/i)
   assert.doesNotMatch(JSON.stringify(result), /child diagnostic/)
+})
+
+
+test('runBridge kills the Python child when the MCP request is aborted', async () => {
+  const controller = new AbortController()
+  const spawned = abortableSpawn()
+  const resultPromise = runBridge(
+    { command: 'download', request: {} },
+    { signal: controller.signal, spawnImpl: () => spawned.child },
+  )
+  controller.abort()
+  const result = await resultPromise
+  assert.equal(spawned.wasKilled(), true)
+  assert.equal(result.final.event, 'failed')
 })
 
 

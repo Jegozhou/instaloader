@@ -117,6 +117,8 @@ stdin 接收一个 JSON 对象；stdout 只输出 JSON Lines 事件。普通 Ins
 - 未识别的认证字段不会进入规范化请求。
 - Node Bridge Runner 会对可能的 password/cookie/session 内容字段再次脱敏。
 - child stderr 有长度上限且不会作为用户可见结果回传。
+- 输出目录命名和文件命名模式只能使用相对路径，不能通过 `..` 或绝对路径越出用户选择的输出目录。
+- MCP 请求取消时，Node Bridge Runner 会终止对应的 Python 子进程。
 - Widget localStorage 只保存安全任务摘要和用户明确允许保留的路径。
 - 安装器不会复制任何 session/Cookie 文件。
 - 构建产物自带 `workbuddy/python/instaloader` 源码；安装器把 `requests` 与 `browser_cookie3` 放进应用私有 Python 目录，不覆盖系统 Instaloader。

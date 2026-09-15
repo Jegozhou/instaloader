@@ -1,6 +1,7 @@
 """Structured JSONL bridge between WorkBuddy and the Instaloader Python API."""
 
 import json
+import ntpath
 import os
 import re
 import sys
@@ -125,6 +126,15 @@ def _validate_nullable_text(value: Any, field: str) -> None:
         raise BridgeError("INVALID_REQUEST", "{} must be text or null.".format(field))
 
 
+def _validate_output_pattern(value: str, field: str) -> None:
+    """Keep WorkBuddy output patterns relative to the selected directory."""
+    if os.path.isabs(value) or ntpath.isabs(value) or ntpath.splitdrive(value)[0]:
+        raise BridgeError("INVALID_REQUEST", "{} must be a relative path pattern.".format(field))
+    parts = value.replace("\\", "/").split("/")
+    if ".." in parts:
+        raise BridgeError("INVALID_REQUEST", "{} cannot traverse parent directories.".format(field))
+
+
 def _normalize_auth(auth_input: Any) -> Dict[str, Any]:
     auth = _merge_known(AUTH_DEFAULTS, auth_input, "auth")
     if auth["mode"] not in SUPPORTED_AUTH_MODES:
@@ -168,6 +178,8 @@ def normalize_download_request(request: Any) -> Dict[str, Any]:
         _validate_nullable_text(output[key], "output.{}".format(key))
     if not output["dirnamePattern"] or not output["filenamePattern"]:
         raise BridgeError("INVALID_REQUEST", "Output naming patterns cannot be empty.")
+    _validate_output_pattern(output["dirnamePattern"], "output.dirnamePattern")
+    _validate_output_pattern(output["filenamePattern"], "output.filenamePattern")
 
     requires_login = (any(target["type"] in LOGIN_REQUIRED_TARGETS for target in targets)
                       or any(content[key] for key in LOGIN_REQUIRED_CONTENT))

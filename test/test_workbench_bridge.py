@@ -96,6 +96,16 @@ class TestWorkbenchBridgeValidation(unittest.TestCase):
             })
         self.assertEqual(error.exception.code, "INVALID_REQUEST")
 
+    def test_output_patterns_cannot_escape_the_selected_directory(self):
+        for field, value in (("dirnamePattern", "../outside"), ("filenamePattern", r"..\outside")):
+            with self.subTest(field=field):
+                with self.assertRaises(BridgeError) as error:
+                    normalize_download_request({
+                        "targets": [{"type": "profile", "value": "instagram"}],
+                        "output": {field: value},
+                    })
+                self.assertEqual(error.exception.code, "INVALID_REQUEST")
+
 
 class TestWorkbenchBridgeProtocol(unittest.TestCase):
 

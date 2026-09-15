@@ -84,6 +84,13 @@ test('WorkBuddy CI consumes the committed npm lockfile reproducibly', () => {
 })
 
 
+test('the aggregate bridge test command selects an available Python 3 executable', () => {
+  const packageJson = json('package.json')
+  assert.equal(packageJson.scripts['test:bridge'], 'node scripts/run-workbench-bridge-tests.mjs')
+  assert.equal(existsSync(new URL('../scripts/run-workbench-bridge-tests.mjs', import.meta.url)), true)
+})
+
+
 test('built widget has no remote script or stylesheet references when artifacts exist', () => {
   const widgetUrl = new URL('../workbuddy/widget.html', import.meta.url)
   if (!existsSync(widgetUrl)) return

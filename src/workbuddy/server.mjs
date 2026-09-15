@@ -110,8 +110,8 @@ export function createServer(options = {}) {
     description: '在不开始下载的情况下验证工作台任务配置。',
     inputSchema: DownloadRequestShape,
     _meta: APP_ONLY_META,
-  }, async (request) => toolResult(
-    await run({ command: 'validate', request }),
+  }, async (request, extra) => toolResult(
+    await run({ command: 'validate', request }, { signal: extra?.signal }),
     '下载任务配置有效。',
   ))
 
@@ -120,8 +120,8 @@ export function createServer(options = {}) {
     description: '验证匿名、Instaloader session 文件或浏览器 Cookie 登录状态，只返回安全的账号摘要。',
     inputSchema: AuthShape,
     _meta: APP_ONLY_META,
-  }, async (auth) => toolResult(
-    await run({ command: 'account_status', auth }),
+  }, async (auth, extra) => toolResult(
+    await run({ command: 'account_status', auth }, { signal: extra?.signal }),
     'Instagram 身份状态已验证。',
   ))
 
@@ -130,8 +130,8 @@ export function createServer(options = {}) {
     description: '通过本机 Instaloader 引擎执行已经确认的下载任务。',
     inputSchema: DownloadRequestShape,
     _meta: APP_ONLY_META,
-  }, async (request) => toolResult(
-    await run({ command: 'download', request }),
+  }, async (request, extra) => toolResult(
+    await run({ command: 'download', request }, { signal: extra?.signal }),
     'Instagram 下载任务已完成。',
   ))
 

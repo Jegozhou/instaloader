@@ -130,6 +130,17 @@ export function runBridge(command, options = {}) {
     child.on('error', () => finish(-1))
     child.on('close', finish)
 
+    const abort = () => {
+      if (!settled) child.kill()
+    }
+    if (options.signal) {
+      if (options.signal.aborted) {
+        abort()
+      } else {
+        options.signal.addEventListener('abort', abort, { once: true })
+      }
+    }
+
     try {
       child.stdin.end(JSON.stringify(redactSecrets(command)))
     } catch {
