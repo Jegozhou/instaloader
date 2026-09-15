@@ -14,6 +14,7 @@ on:
       - 'test/test_workbench_bridge*.py'
       - 'test/workbuddy-*.test.mjs'
       - 'package.json'
+      - 'package-lock.json'
       - 'build.mjs'
       - '.mcp.json'
       - '.codebuddy-plugin/**'
@@ -46,7 +47,7 @@ jobs:
           node-version: '20'
 
       - name: Install WorkBuddy dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build WorkBuddy app
         run: npm run build
