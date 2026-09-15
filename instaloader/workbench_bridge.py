@@ -399,7 +399,7 @@ def execute_download(request: Any, loader_factory: Callable[..., Any] = Instaloa
             "targetsFailed": 0,
             "downloaded": None,
             "skipped": None,
-            "outputDirectory": normalized["output"]["directory"],
+            "outputDirectory": normalized["output"]["directory"] or os.getcwd(),
             "authMode": normalized["auth"]["mode"],
         }
         sink("progress", {"stage": "完成"})
