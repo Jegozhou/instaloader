@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { EventEmitter } from 'node:events'
+import { readFileSync } from 'node:fs'
 import { PassThrough, Writable } from 'node:stream'
 import test from 'node:test'
 
@@ -102,4 +103,14 @@ test('redactSecrets removes secret fields recursively but preserves local path f
   assert.equal(redacted.auth.sessionContents, '[REDACTED]')
   assert.equal(redacted.auth.sessionFile, '/tmp/session-user')
   assert.equal(redacted.auth.cookieFile, '/tmp/Cookies')
+})
+
+
+test('server source registers the WorkBuddy tools without a password schema or external CSP', () => {
+  const source = readFileSync(new URL('../src/workbuddy/server.mjs', import.meta.url), 'utf8')
+  for (const name of TOOL_NAMES) assert.match(source, new RegExp(`['"]${name}['"]`))
+  assert.doesNotMatch(source, /password/i)
+  assert.match(source, /visibility:\s*\['app'\]/)
+  assert.match(source, /resourceDomains:\s*\[\]/)
+  assert.match(source, /connectDomains:\s*\[\]/)
 })
