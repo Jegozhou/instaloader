@@ -24,6 +24,6 @@ jobs:
           pipenv --python `python --version | grep -Eo '3\.[0-9]+'` sync --dev
       - name: PyLint
         if: matrix.python-version != '3.9'
-        run: pipenv --python `python --version | grep -Eo '3\.[0-9]+'` run pylint instaloader
+        run: pipenv --python `python --version | grep -Eo '3\.[0-9]+'` run pylint --disable=unrecognized-option instaloader
       - name: MyPy
         run: pipenv --python `python --version | grep -Eo '3\.[0-9]+'` run mypy -m instaloader
