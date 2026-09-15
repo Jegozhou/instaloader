@@ -4,8 +4,11 @@ import json
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
-from instaloader.workbench_bridge import BridgeError, normalize_download_request
+from instaloader.exceptions import ProfileNotExistsException
+from instaloader.workbench_bridge import (BridgeError, check_account_status, execute_download,
+                                          normalize_download_request)
 
 
 class TestWorkbenchBridgeValidation(unittest.TestCase):
@@ -118,6 +121,181 @@ class TestWorkbenchBridgeProtocol(unittest.TestCase):
         self.assertEqual(events[-1]["event"], "failed")
         self.assertEqual(events[-1]["data"]["code"], "INVALID_REQUEST")
         self.assertNotIn("traceback", events[-1]["data"]["message"].lower())
+
+
+class FakeContext:
+    def __init__(self):
+        self.is_logged_in = False
+        self.username = None
+
+    def update_cookies(self, cookies):
+        del cookies
+
+
+class FakeLoader:
+    instances = []
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        self.context = FakeContext()
+        self.calls = []
+        FakeLoader.instances.append(self)
+
+    def load_session_from_file(self, username, filename=None):
+        if filename == "missing":
+            raise FileNotFoundError(filename)
+        self.context.is_logged_in = True
+        self.context.username = username
+        self.calls.append(("load_session_from_file", username, filename))
+
+    def test_login(self):
+        return self.context.username if self.context.is_logged_in else None
+
+    def close(self):
+        self.calls.append(("close",))
+
+    def download_profiles(self, *args, **kwargs):
+        self.calls.append(("download_profiles", args, kwargs))
+
+    def download_hashtag(self, *args, **kwargs):
+        self.calls.append(("download_hashtag", args, kwargs))
+
+    def download_post(self, *args, **kwargs):
+        self.calls.append(("download_post", args, kwargs))
+
+    def download_feed_posts(self, *args, **kwargs):
+        self.calls.append(("download_feed_posts", args, kwargs))
+
+    def download_stories(self, *args, **kwargs):
+        self.calls.append(("download_stories", args, kwargs))
+
+    def download_saved_posts(self, *args, **kwargs):
+        self.calls.append(("download_saved_posts", args, kwargs))
+
+
+class TestWorkbenchBridgeAuthentication(unittest.TestCase):
+
+    def setUp(self):
+        FakeLoader.instances = []
+
+    def test_anonymous_account_status_is_safe(self):
+        status = check_account_status({"mode": "anonymous"}, loader_factory=FakeLoader)
+        self.assertEqual(status, {
+            "authenticated": False,
+            "username": None,
+            "authMode": "anonymous",
+            "message": "Anonymous mode",
+        })
+
+    def test_missing_session_file_is_auth_failed(self):
+        with self.assertRaises(BridgeError) as error:
+            check_account_status({
+                "mode": "session",
+                "username": "tester",
+                "sessionFile": "missing",
+            }, loader_factory=FakeLoader)
+        self.assertEqual(error.exception.code, "AUTH_FAILED")
+
+    def test_session_status_returns_no_session_material(self):
+        status = check_account_status({
+            "mode": "session",
+            "username": "tester",
+            "sessionFile": "/private/session-tester",
+        }, loader_factory=FakeLoader)
+        self.assertEqual(status["authenticated"], True)
+        self.assertEqual(status["username"], "tester")
+        self.assertEqual(status["authMode"], "session")
+        self.assertEqual(set(status), {"authenticated", "username", "authMode", "message"})
+
+    def test_browser_mode_without_optional_dependency_is_auth_failed(self):
+        with patch("instaloader.workbench_bridge.bc3_library", False):
+            with self.assertRaises(BridgeError) as error:
+                check_account_status({
+                    "mode": "browser",
+                    "browser": "firefox",
+                }, loader_factory=FakeLoader)
+        self.assertEqual(error.exception.code, "AUTH_FAILED")
+
+
+class TestWorkbenchBridgeExecution(unittest.TestCase):
+
+    def setUp(self):
+        FakeLoader.instances = []
+
+    def test_profile_request_maps_options_and_emits_stages(self):
+        request = {
+            "targets": [{"type": "profile", "value": "instagram"}],
+            "content": {
+                "comments": True,
+                "geotags": True,
+                "captions": False,
+                "metadataJson": False,
+            },
+            "output": {
+                "directory": "/tmp/downloads",
+                "sanitizePaths": True,
+                "resume": False,
+            },
+            "auth": {"mode": "session", "username": "tester"},
+        }
+        events = []
+
+        with patch("instaloader.workbench_bridge.Profile.from_username", return_value=object()):
+            result = execute_download(
+                request,
+                loader_factory=FakeLoader,
+                event_sink=lambda event, data: events.append((event, data)),
+            )
+
+        loader = FakeLoader.instances[-1]
+        self.assertTrue(loader.kwargs["download_comments"])
+        self.assertTrue(loader.kwargs["download_geotags"])
+        self.assertFalse(loader.kwargs["save_metadata"])
+        self.assertEqual(loader.kwargs["post_metadata_txt_pattern"], "")
+        self.assertIsNone(loader.kwargs["resume_prefix"])
+        self.assertTrue(loader.kwargs["sanitize_paths"])
+        self.assertTrue(loader.kwargs["dirname_pattern"].endswith("{target}"))
+        self.assertTrue(any(call[0] == "download_profiles" for call in loader.calls))
+        stages = [data["stage"] for event, data in events if event == "progress"]
+        self.assertEqual(stages, ["准备任务", "验证身份", "解析目标", "下载中", "保存元数据", "完成"])
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["targetsCompleted"], 1)
+
+    def test_each_non_profile_target_routes_to_existing_loader_method(self):
+        cases = [
+            ("hashtag", "#kitten", "download_hashtag"),
+            ("shortcode", "-ABC123", "download_post"),
+            ("feed", ":feed", "download_feed_posts"),
+            ("stories", ":stories", "download_stories"),
+            ("saved", ":saved", "download_saved_posts"),
+        ]
+        for target_type, value, expected_method in cases:
+            with self.subTest(target_type=target_type):
+                FakeLoader.instances = []
+                auth = {"mode": "anonymous"}
+                if target_type in ("feed", "stories", "saved"):
+                    auth = {"mode": "session", "username": "tester"}
+                request = {
+                    "targets": [{"type": target_type, "value": value}],
+                    "auth": auth,
+                }
+                with patch("instaloader.workbench_bridge.Post.from_shortcode", return_value=object()):
+                    execute_download(request, loader_factory=FakeLoader)
+                loader = FakeLoader.instances[-1]
+                self.assertTrue(any(call[0] == expected_method for call in loader.calls))
+
+    def test_profile_not_found_maps_to_stable_error_code(self):
+        request = {
+            "targets": [{"type": "profile", "value": "missingprofile"}],
+            "auth": {"mode": "anonymous"},
+        }
+        with patch(
+            "instaloader.workbench_bridge.Profile.from_username",
+            side_effect=ProfileNotExistsException("not found"),
+        ):
+            with self.assertRaises(BridgeError) as error:
+                execute_download(request, loader_factory=FakeLoader)
+        self.assertEqual(error.exception.code, "TARGET_NOT_FOUND")
 
 
 if __name__ == "__main__":
