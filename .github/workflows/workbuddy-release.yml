@@ -15,6 +15,7 @@ on:
       - 'docs/WORKBUDDY_WORKBENCH.md'
       - 'test/workbuddy-*.test.mjs'
       - 'package.json'
+      - 'package-lock.json'
       - 'build.mjs'
       - '.mcp.json'
       - '.codebuddy-plugin/**'
@@ -42,7 +43,7 @@ jobs:
           node-version: '20'
 
       - name: Install WorkBuddy dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build WorkBuddy app
         run: npm run build
@@ -135,7 +136,7 @@ jobs:
           node-version: '20'
 
       - name: Install WorkBuddy dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build and stage WorkBuddy release
         run: |
