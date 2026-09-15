@@ -25,7 +25,6 @@
 
 .. |downloads| image:: https://pepy.tech/badge/instaloader/month
    :alt: PyPI Download Count
-   :target: https://pepy.tech/project/instaloader
 
 .. badges-end
 
@@ -59,34 +58,33 @@
 
 `Instaloader Documentation <https://instaloader.github.io/>`__
 
-WorkBuddy Instagram Download Workbench
---------------------------------------
+WorkBuddy Instagram 下载工作台
+------------------------------
 
-This fork additionally contains an **optional native WorkBuddy MCP App** that
-wraps the existing Instaloader engine in a local graphical workbench.  The
-original Python API and ``instaloader`` CLI remain available and compatible.
+This fork also includes an optional native **WorkBuddy MCP App** that exposes the
+existing Instaloader engine through a local graphical workbench. The original
+Python API and ``instaloader`` CLI remain available and unchanged.
 
-The WorkBuddy layer provides a visual task builder for Profile, Hashtag,
-Shortcode, Feed, Stories and Saved targets, together with content options,
-filters, output rules, safe task history and structured results.
+The WorkBuddy app supports anonymous mode, existing Instaloader session files,
+and local browser-cookie reuse. It **does not provide or store an Instagram
+password field**.
 
-Authentication follows a password-free model: anonymous access, an existing
-Instaloader session file, or browser cookies through the optional
-``browser_cookie3`` integration.  The workbench does **not** provide an
-Instagram password field and does not persist raw cookie/session contents.
-
-To build it from source, Node.js 20+ is required in addition to the normal
-Python requirements::
+From this source branch, build the local MCP App with::
 
     npm install
     npm run build
+
+Then install it into WorkBuddy with::
+
     bash scripts/install-workbuddy-app.sh
 
-Windows users can run ``scripts/install-workbuddy-app.ps1`` instead.  After
-restarting WorkBuddy, enter ``打开 Instagram 下载工作台``.
+On Windows, use::
 
-See ``docs/INSTALL_WORKBUDDY.md`` for installation details and
-``docs/WORKBUDDY_WORKBENCH.md`` for the architecture and security model.
+    powershell -ExecutionPolicy Bypass -File .\scripts\install-workbuddy-app.ps1
+
+After restarting WorkBuddy, enter ``打开 Instagram 下载工作台``. See
+``docs/INSTALL_WORKBUDDY.md`` for installation and security details and
+``docs/WORKBUDDY_WORKBENCH.md`` for the architecture and supported targets.
 
 
 How to Automatically Download Pictures from Instagram
