@@ -74,6 +74,16 @@ test('release packaging has a portable staging command and uninstallers', () => 
 })
 
 
+test('WorkBuddy CI consumes the committed npm lockfile reproducibly', () => {
+  assert.equal(existsSync(new URL('../package-lock.json', import.meta.url)), true, 'package-lock.json must be committed')
+  for (const path of ['.github/workflows/workbuddy.yml', '.github/workflows/workbuddy-release.yml']) {
+    const workflow = text(path)
+    assert.match(workflow, /npm ci --no-audit --no-fund/)
+    assert.doesNotMatch(workflow, /npm install --no-audit --no-fund/)
+  }
+})
+
+
 test('built widget has no remote script or stylesheet references when artifacts exist', () => {
   const widgetUrl = new URL('../workbuddy/widget.html', import.meta.url)
   if (!existsSync(widgetUrl)) return
