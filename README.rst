@@ -59,6 +59,35 @@
 
 `Instaloader Documentation <https://instaloader.github.io/>`__
 
+WorkBuddy Instagram Download Workbench
+--------------------------------------
+
+This fork additionally contains an **optional native WorkBuddy MCP App** that
+wraps the existing Instaloader engine in a local graphical workbench.  The
+original Python API and ``instaloader`` CLI remain available and compatible.
+
+The WorkBuddy layer provides a visual task builder for Profile, Hashtag,
+Shortcode, Feed, Stories and Saved targets, together with content options,
+filters, output rules, safe task history and structured results.
+
+Authentication follows a password-free model: anonymous access, an existing
+Instaloader session file, or browser cookies through the optional
+``browser_cookie3`` integration.  The workbench does **not** provide an
+Instagram password field and does not persist raw cookie/session contents.
+
+To build it from source, Node.js 20+ is required in addition to the normal
+Python requirements::
+
+    npm install
+    npm run build
+    bash scripts/install-workbuddy-app.sh
+
+Windows users can run ``scripts/install-workbuddy-app.ps1`` instead.  After
+restarting WorkBuddy, enter ``打开 Instagram 下载工作台``.
+
+See ``docs/INSTALL_WORKBUDDY.md`` for installation details and
+``docs/WORKBUDDY_WORKBENCH.md`` for the architecture and security model.
+
 
 How to Automatically Download Pictures from Instagram
 -----------------------------------------------------
