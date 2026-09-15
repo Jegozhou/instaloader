@@ -50,6 +50,7 @@ export function runBridge(command, options = {}) {
     || process.env.INSTALOADER_PYTHON
     || (process.platform === 'win32' ? 'python' : 'python3')
   const cwd = options.cwd || process.cwd()
+  const env = { ...process.env, ...(options.env || {}) }
   const spawnImpl = options.spawnImpl || spawn
   const maxEvents = Math.max(1, Number(options.maxEvents || DEFAULT_MAX_EVENTS))
   const maxStderr = Math.max(0, Number(options.maxStderr || DEFAULT_MAX_STDERR))
@@ -60,7 +61,7 @@ export function runBridge(command, options = {}) {
       child = spawnImpl(
         python,
         ['-m', 'instaloader.workbench_bridge'],
-        { cwd, stdio: ['pipe', 'pipe', 'pipe'] },
+        { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] },
       )
     } catch {
       const final = internalFailure('Unable to start the local Instaloader bridge.')
