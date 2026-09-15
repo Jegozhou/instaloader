@@ -44,9 +44,9 @@ test('requestRequiresLogin detects target and content requirements', () => {
   publicRequest.targets[0].value = 'instagram'
   assert.equal(requestRequiresLogin(publicRequest), false)
 
-  for (const type of ['feed', 'stories', 'saved']) {
+  for (const type of ['hashtag', 'feed', 'stories', 'saved']) {
     const request = createDefaultRequest()
-    request.targets = [{ type, value: `:${type}` }]
+    request.targets = [{ type, value: type === 'hashtag' ? '#kitten' : `:${type}` }]
     assert.equal(requestRequiresLogin(request), true)
   }
 
