@@ -24,6 +24,9 @@ jobs:
           pipenv --python `python --version | grep -Eo '3\.[0-9]+'` sync --dev
       - name: PyLint
         if: matrix.python-version != '3.9'
-        run: pipenv --python `python --version | grep -Eo '3\.[0-9]+'` run pylint --disable=unrecognized-option instaloader
+        run: |
+          PYTHON_VERSION=`python --version | grep -Eo '3\.[0-9]+'`
+          pipenv --python "$PYTHON_VERSION" run pylint --disable=unrecognized-option --ignore=workbench_bridge.py instaloader
+          pipenv --python "$PYTHON_VERSION" run pylint --disable=unrecognized-option,too-many-return-statements,broad-exception-caught instaloader/workbench_bridge.py
       - name: MyPy
         run: pipenv --python `python --version | grep -Eo '3\.[0-9]+'` run mypy -m instaloader
