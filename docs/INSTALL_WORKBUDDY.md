@@ -4,10 +4,11 @@
 
 ## 要求
 
-- Python 3.9 或更高版本（与当前 Instaloader 包一致）。
-- Node.js 20 或更高版本，仅用于 WorkBuddy MCP App 的构建/运行。
+- Python 3.9 或更高版本，并且带有 `pip`。
+- Node.js 20 或更高版本，用于 WorkBuddy MCP App 的构建/运行。
 - WorkBuddy。
-- 如需直接从浏览器读取 Instagram Cookie，安装 Instaloader 的 `browser_cookie3` 可选依赖。
+
+安装器会把 WorkBuddy 所需的 Python 依赖（`requests` 与 `browser_cookie3`）安装到应用自己的 `python/` 目录，不会替换系统 Python 中已有的 Instaloader。
 
 ## 从源码安装
 
@@ -16,7 +17,6 @@ git clone https://github.com/Jegozhou/instaloader.git
 cd instaloader
 git checkout feat/workbuddy-workbench
 
-python -m pip install -e '.[browser_cookie3]'
 npm install
 npm run build
 ```
@@ -35,13 +35,15 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-workbuddy-app.ps1
 
 安装器会：
 
-1. 检查 Node.js 20+。
-2. 把构建后的 `workbuddy/server.mjs` 与 `workbuddy/widget.html` 安装到 `~/.workbuddy/apps/instagram-workbench`（Windows 使用用户目录下的 `.workbuddy`）。
-3. 安装 `agents/instagram-workbench` Skill。
-4. 在修改 WorkBuddy `.mcp.json` 前创建带时间戳的备份。
-5. 只添加/更新 `instagram-workbench` 这一项，不删除其他 MCP Server 配置。
+1. 检查 Node.js 20+、Python 3.9+ 与 `pip`。
+2. 安装完整 `workbuddy/` 产物到 `~/.workbuddy/apps/instagram-workbench`（Windows 使用用户目录下的 `.workbuddy`），其中包括 MCP Server、Widget 和应用私有的 Instaloader Python 源码。
+3. 把 `requests>=2.25` 与 `browser_cookie3>=0.19.1` 安装到该应用私有 `python/` 目录。
+4. 安装 `agents/instagram-workbench` Skill。
+5. 创建默认下载目录 `~/Downloads/Instaloader`；可在运行安装器前通过 `INSTALOADER_WORKBENCH_CWD` 改成其他目录。
+6. 在修改 WorkBuddy `.mcp.json` 前创建带时间戳的备份，只添加/更新 `instagram-workbench` 这一项，不删除其他 MCP Server 配置。
+7. 在 MCP Server 环境中记录 Python 可执行文件路径和默认下载目录，随后执行本机 Bridge 导入与 Node Server 语法自检。
 
-安装器**不会**读取、复制或上传 Instaloader session 文件、浏览器 Cookie、Instagram 密码或下载内容。
+安装器**不会**读取、复制或上传 Instaloader session 文件、浏览器 Cookie、Instagram 密码或下载内容。Session/Cookie 文件只有在你主动选择相应身份模式时，才由本机 Python Bridge 按路径访问。
 
 ## 启动
 
@@ -55,7 +57,7 @@ WorkBuddy 会调用 `show_instagram_workbench` 并打开完整 MCP App Widget。
 
 ### 匿名
 
-适合 Instagram 当前允许匿名访问的公开内容。最终能否访问由 Instagram 与 Instaloader 的实际响应决定。
+适合 Instagram 当前仍允许匿名访问的内容。最终能否访问由 Instagram 与 Instaloader 的实际响应决定。
 
 ### Instaloader Session 文件
 
@@ -82,14 +84,26 @@ WorkBuddy 会调用 `show_instagram_workbench` 并打开完整 MCP App Widget。
 - Stories
 - Saved
 
+当前 Instaloader 4.15.x 的 `download_hashtag()` 需要登录，因此 Hashtag、Feed、Stories、Saved 会在匿名模式下被工作台提前拦截。Profile 与 Shortcode 是否可匿名访问仍取决于 Instagram 的实际响应以及目标本身的权限。
+
 Instaloader CLI 原本支持的其他目标仍可以继续通过命令行使用。
+
+## 默认下载目录
+
+安装器默认使用：
+
+```text
+~/Downloads/Instaloader
+```
+
+Windows 对应用户目录下的 `Downloads\Instaloader`。任务中显式填写保存目录时，以任务配置为准。
 
 ## 开发验证
 
 Python Bridge 单元测试：
 
 ```bash
-python -m unittest discover -s test -p 'test_workbench_bridge.py' -v
+python -m unittest discover -s test -p 'test_workbench_bridge*.py' -v
 ```
 
 WorkBuddy 构建与 Node 测试：
@@ -101,11 +115,17 @@ npm run test:node
 node --check workbuddy/server.mjs
 ```
 
-仓库还包含 `.github/workflows/workbuddy.yml`。若 fork 尚未启用 GitHub Actions，需要先在 GitHub 仓库的 Actions 页面启用工作流。
+或者一次执行：
+
+```bash
+npm run check
+```
+
+仓库中的 `.github/workflows/workbuddy.yml` 会执行 Python Bridge 测试、WorkBuddy 构建、Node 契约/产物测试、Bundled Python Bridge 导入检查和 Server 语法检查。
 
 ## 排障
 
-### `workbuddy/server.mjs` 或 `widget.html` 不存在
+### `workbuddy/server.mjs`、`widget.html` 或 Bundled Python Bridge 不存在
 
 源码仓库需要先执行：
 
@@ -114,19 +134,25 @@ npm install
 npm run build
 ```
 
-### 浏览器 Cookie 验证失败
+构建完成后应存在：
 
-确认安装了可选依赖：
-
-```bash
-python -m pip install -e '.[browser_cookie3]'
+```text
+workbuddy/server.mjs
+workbuddy/widget.html
+workbuddy/python/instaloader/workbench_bridge.py
 ```
 
-并确认相应浏览器中当前存在有效的 Instagram 登录状态。
+### Python 依赖安装失败
 
-### Feed / Stories / Saved 被提前拦截
+安装器需要通过 `pip` 将运行依赖放到应用私有目录。如果网络、代理或 Python 安装阻止 `pip install`，修复对应环境后重新运行安装器即可；无需修改系统里的 Instaloader 包。
 
-这些目标需要已验证的登录状态。切换到 Session 文件或浏览器 Cookie 模式后重新验证。
+### 浏览器 Cookie 验证失败
+
+安装器会安装 `browser_cookie3`，但浏览器本身仍必须存在有效的 Instagram 登录状态，并且本机系统必须允许读取对应 Cookie 存储。
+
+### Hashtag / Feed / Stories / Saved 被提前拦截
+
+当前 Instaloader 版本要求这些目标使用已验证的登录状态。切换到 Session 文件或浏览器 Cookie 模式后重新验证。
 
 ### WorkBuddy 没有出现图形界面
 
