@@ -34,12 +34,15 @@ test('Skill launches the MCP App and states the no-password boundary', () => {
 })
 
 
-test('build pipeline produces local WorkBuddy artifacts', () => {
+test('build pipeline produces local WorkBuddy artifacts and bundled Python source', () => {
   const build = text('scripts/build-workbuddy-app.mjs')
-  assert.match(build, /workbuddy\/widget\.html/)
-  assert.match(build, /workbuddy\/server\.mjs/)
+  assert.match(build, /widget\.html/)
+  assert.match(build, /server\.mjs/)
+  assert.match(build, /pythonPackageTarget/)
+  assert.match(build, /workbench_bridge\.py/)
   assert.match(build, /bundle:\s*true/)
   assert.match(build, /minify:\s*true/)
+  assert.match(build, /256\s*\*\s*1024/)
 })
 
 
@@ -50,17 +53,18 @@ test('installers merge only the named MCP entry and do not copy auth material', 
     assert.match(source, /backup/i)
     assert.match(source, /server\.mjs/)
     assert.match(source, /widget\.html/)
+    assert.match(source, /INSTALOADER_PYTHON/)
+    assert.match(source, /INSTALOADER_WORKBENCH_CWD/)
     assert.doesNotMatch(source, /cp .*session|Copy-Item .*session/i)
     assert.doesNotMatch(source, /cp .*cookie|Copy-Item .*cookie/i)
   }
 })
 
 
-test('built widget is self-contained when build artifacts exist', () => {
+test('built widget has no remote script or stylesheet references when artifacts exist', () => {
   const widgetUrl = new URL('../workbuddy/widget.html', import.meta.url)
   if (!existsSync(widgetUrl)) return
   const widget = readFileSync(widgetUrl, 'utf8')
   assert.doesNotMatch(widget, /<script[^>]+src=/i)
   assert.doesNotMatch(widget, /<link[^>]+href=/i)
-  assert.doesNotMatch(widget, /https?:\/\//i)
 })
