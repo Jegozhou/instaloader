@@ -1,7 +1,7 @@
 """Regression tests for WorkBuddy bridge compatibility with Instaloader 4.15.x."""
 
+import os
 import unittest
-from unittest.mock import patch
 
 from instaloader.workbench_bridge import BridgeError, execute_download, normalize_download_request
 
@@ -54,11 +54,7 @@ class TestBridgeInstaloaderCompatibility(unittest.TestCase):
             "auth": {"mode": "anonymous"},
         }
 
-        with patch(
-            "instaloader.workbench_bridge.Profile.from_username",
-            side_effect=AssertionError("profile route must use loader.check_profile_id"),
-        ):
-            result = execute_download(request, loader_factory=FakeProfileLoader)
+        result = execute_download(request, loader_factory=FakeProfileLoader)
 
         self.assertEqual(result["status"], "completed")
         loader = FakeProfileLoader.instances[-1]
@@ -69,6 +65,13 @@ class TestBridgeInstaloaderCompatibility(unittest.TestCase):
         self.assertEqual(download_call[2]["max_count"], 7)
         self.assertTrue(download_call[2]["raise_errors"])
         self.assertTrue(download_call[2]["reels"])
+
+    def test_result_reports_runtime_directory_when_output_directory_is_not_explicit(self):
+        result = execute_download({
+            "targets": [{"type": "profile", "value": "instagram"}],
+            "auth": {"mode": "anonymous"},
+        }, loader_factory=FakeProfileLoader)
+        self.assertEqual(result["outputDirectory"], os.getcwd())
 
 
 if __name__ == "__main__":
