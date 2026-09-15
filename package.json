@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "node build.mjs",
+    "package:workbuddy": "node scripts/package-workbuddy-release.mjs",
     "test:node": "node --test test/workbuddy-*.test.mjs",
     "test:bridge": "python -m unittest discover -s test -p 'test_workbench_bridge*.py' -v",
     "check": "npm run build && npm run test:node && npm run test:bridge"
