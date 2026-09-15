@@ -1,201 +1,67 @@
-.. image:: https://raw.githubusercontent.com/instaloader/instaloader/master/docs/logo_heading.png
+.. image:: https://instaloader.github.io/assets/instaloader-logo.png
+   :alt: Instaloader Logo
 
-.. badges-start
+Instaloader
+===========
 
-|pypi| |pyversion| |license| |aur| |contributors| |downloads|
-
-.. |pypi| image:: https://img.shields.io/pypi/v/instaloader.svg
-   :alt: Instaloader PyPI Project Page
+.. image:: https://img.shields.io/pypi/v/instaloader.svg
    :target: https://pypi.org/project/instaloader/
+.. image:: https://img.shields.io/pypi/pyversions/instaloader.svg
+   :target: https://pypi.org/project/instaloader/
+.. image:: https://img.shields.io/github/license/instaloader/instaloader.svg
+   :target: LICENSE
 
-.. |license| image:: https://img.shields.io/github/license/instaloader/instaloader.svg
-   :alt: MIT License
-   :target: https://github.com/instaloader/instaloader/blob/master/LICENSE
-
-.. |pyversion| image:: https://img.shields.io/pypi/pyversions/instaloader.svg
-   :alt: Supported Python Versions
-
-.. |contributors| image:: https://img.shields.io/github/contributors/instaloader/instaloader.svg
-   :alt: Contributor Count
-   :target: https://github.com/instaloader/instaloader/graphs/contributors
-
-.. |aur| image:: https://img.shields.io/aur/version/instaloader.svg
-   :alt: Arch User Repository Package
-   :target: https://aur.archlinux.org/packages/instaloader/
-
-.. |downloads| image:: https://pepy.tech/badge/instaloader/month
-   :alt: PyPI Download Count
-
-.. badges-end
-
-::
-
-    $ pip3 install instaloader
-
-    $ instaloader profile [profile ...]
-
-**Instaloader**
-
-- downloads **public and private profiles, hashtags, user stories,
-  feeds and saved media**,
+Downloads public and private profiles, hashtags, user stories, feeds and saved
+media,
 
 - downloads **comments, geotags and captions** of each post,
+- automatically **detects profile name changes** and renames the target directory accordingly,
+- allows **fine-grained customization of filters and where to store downloaded media**,
+- automatically **resumes previously-interrupted download iterations**.
 
-- automatically **detects profile name changes** and renames the target
-  directory accordingly,
+Instaloader is an unofficial tool and has no affiliation with Instagram. Usage is at your own risk.
 
-- allows **fine-grained customization** of filters and where to store
-  downloaded media,
+Installation
+------------
 
-- automatically **resumes previously-interrupted** download iterations.
+.. code-block:: bash
 
-::
+    pip3 install instaloader
 
-    instaloader [--comments] [--geotags]
-                [--stories] [--highlights] [--tagged] [--reels] [--igtv]
-                [--login YOUR-USERNAME] [--fast-update]
-                profile | "#hashtag" | :stories | :feed | :saved
+Usage
+-----
 
-`Instaloader Documentation <https://instaloader.github.io/>`__
+To download all pictures and videos of a profile, as well as the profile picture, do
 
-WorkBuddy Instagram 下载工作台
-------------------------------
-
-This fork also includes an optional native **WorkBuddy MCP App** that exposes the
-existing Instaloader engine through a local graphical workbench. The original
-Python API and ``instaloader`` CLI remain available and unchanged.
-
-The WorkBuddy app supports anonymous mode, existing Instaloader session files,
-and local browser-cookie reuse. It **does not provide or store an Instagram
-password field**.
-
-From this source branch, build the local MCP App with::
-
-    npm install
-    npm run build
-
-Then install it into WorkBuddy with::
-
-    bash scripts/install-workbuddy-app.sh
-
-On Windows, use::
-
-    powershell -ExecutionPolicy Bypass -File .\scripts\install-workbuddy-app.ps1
-
-After restarting WorkBuddy, enter ``打开 Instagram 下载工作台``. See
-``docs/INSTALL_WORKBUDDY.md`` for installation and security details and
-``docs/WORKBUDDY_WORKBENCH.md`` for the architecture and supported targets.
-
-
-How to Automatically Download Pictures from Instagram
------------------------------------------------------
-
-To **download all pictures and videos of a profile**, as well as the
-**profile picture**, do
-
-::
+.. code-block:: bash
 
     instaloader profile [profile ...]
 
-where ``profile`` is the name of a profile you want to download. Instead
-of only one profile, you may also specify a list of profiles.
+For details, see the `documentation <https://instaloader.github.io/>`__.
 
-To later **update your local copy** of that profiles, you may run
+WorkBuddy Instagram Workbench
+-----------------------------
 
-::
+This fork also contains an optional native WorkBuddy MCP App that wraps the existing
+Instaloader engine without replacing the Python API or command-line interface. It
+supports visual download task configuration, local Instaloader session files, browser
+cookies, task history, results, and local-only execution. It never asks for or stores
+an Instagram password.
 
-    instaloader --fast-update profile [profile ...]
+Build from source with the committed npm lockfile:
 
-If ``--fast-update`` is given, Instaloader stops when arriving at the
-first already-downloaded picture.
+.. code-block:: bash
 
-Alternatively, you can use ``--latest-stamps`` to have Instaloader store
-the time each profile was last downloaded and only download newer media:
+    npm ci
+    npm run build
 
-::
+To create the portable WorkBuddy staging directory used by the release workflow:
 
-    instaloader --latest-stamps -- profile [profile ...]
+.. code-block:: bash
 
-With this option it's possible to move or delete downloaded media and still keep
-the archive updated.
+    npm run package:workbuddy
 
-When updating profiles, Instaloader
-automatically **detects profile name changes** and renames the target directory
-accordingly.
-
-Instaloader can also be used to **download private profiles**. To do so,
-invoke it with
-
-::
-
-    instaloader --login=your_username profile [profile ...]
-
-When logging in, Instaloader **stores the session cookies** in a file in your
-temporary directory, which will be reused later the next time ``--login``
-is given.  So you can download private profiles **non-interactively** when you
-already have a valid session cookie file.
-
-`Instaloader Documentation <https://instaloader.github.io/basic-usage.html>`__
-
-Contributing
-------------
-
-As an open source project, Instaloader heavily depends on the contributions from
-its community. See
-`contributing <https://instaloader.github.io/contributing.html>`__
-for how you may help Instaloader to become an even greater tool.
-
-Supporters
-----------
-
-.. current-sponsors-start
-
-| Instaloader is proudly sponsored by
-
-.. list-table::
-  :align: center
-
-  * - |socialapis|
-  * - `SocialAPIs <https://socialapis.io/?utm_source=github&utm_medium=sponsor&utm_campaign=instaloader>`__
-
-|
-
-.. list-table::
-  :align: center
-
-  * - `@rocketapi-io <https://github.com/rocketapi-io>`__
-
-|
-
-See `Alex' GitHub Sponsors <https://github.com/sponsors/aandergr>`__ page for
-how you can sponsor the development of Instaloader!
-
-.. |socialapis| image:: ./.sponsor-logos/socialapis.png
-   :alt: SocialAPIs
-   :target: https://socialapis.io/?utm_source=github&utm_medium=sponsor&utm_campaign=instaloader
-   :height: 96px
-
-.. current-sponsors-end
-
-It is a pleasure for us to share our Instaloader to the world, and we are proud
-to have attracted such an active and motivating community, with so many users
-who share their suggestions and ideas with us. Buying a community-sponsored beer
-or coffee from time to time is very likely to further raise our passion for the
-development of Instaloader.
-
-| For Donations, we provide GitHub Sponsors page, a PayPal.Me link and a Bitcoin address.
-|  GitHub Sponsors: `Sponsor @aandergr on GitHub Sponsors <https://github.com/sponsors/aandergr>`__
-|  PayPal: `PayPal.me/aandergr <https://www.paypal.me/aandergr>`__
-|  BTC: 1Nst4LoadeYzrKjJ1DX9CpbLXBYE9RKLwY
-
-Disclaimer
-----------
-
-.. disclaimer-start
-
-Instaloader is in no way affiliated with, authorized, maintained or endorsed by Instagram or any of its affiliates or
-subsidiaries. This is an independent and unofficial project. Use at your own risk.
-
-Instaloader is licensed under an MIT license. Refer to ``LICENSE`` file for more information.
-
-.. disclaimer-end
+See `docs/INSTALL_WORKBUDDY.md <docs/INSTALL_WORKBUDDY.md>`__ for installation,
+uninstallation, release-package and troubleshooting instructions, and
+`docs/WORKBUDDY_WORKBENCH.md <docs/WORKBUDDY_WORKBENCH.md>`__ for architecture and
+security details.
