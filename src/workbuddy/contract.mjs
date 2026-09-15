@@ -23,5 +23,5 @@ export const AUTH_MODES = Object.freeze([
   'browser',
 ])
 
-export const LOGIN_REQUIRED_TARGETS = new Set(['feed', 'stories', 'saved'])
+export const LOGIN_REQUIRED_TARGETS = new Set(['hashtag', 'feed', 'stories', 'saved'])
 export const LOGIN_REQUIRED_CONTENT = new Set(['stories', 'highlights', 'comments', 'geotags'])
