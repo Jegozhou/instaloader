@@ -15,12 +15,12 @@ from .exceptions import (AbortDownloadException, ConnectionException, Instaloade
                          ProfileNotExistsException, TooManyRequestsException)
 from .instaloader import Instaloader
 from .lateststamps import LatestStamps
-from .structures import Post, Profile, StoryItem
+from .structures import Post, StoryItem
 
 
 SUPPORTED_TARGET_TYPES = {"profile", "hashtag", "shortcode", "feed", "stories", "saved"}
 SUPPORTED_AUTH_MODES = {"anonymous", "session", "browser"}
-LOGIN_REQUIRED_TARGETS = {"feed", "stories", "saved"}
+LOGIN_REQUIRED_TARGETS = {"hashtag", "feed", "stories", "saved"}
 LOGIN_REQUIRED_CONTENT = {"stories", "highlights", "comments", "geotags"}
 
 CONTENT_DEFAULTS = {
@@ -224,7 +224,7 @@ def _authenticate_loader(loader: Any, auth: Dict[str, Any]) -> Dict[str, Any]:
         try:
             loader.load_session_from_file(auth["username"], auth["sessionFile"])
             username = loader.test_login()
-        except (FileNotFoundError, LoginException, ConnectionException) as exc:
+        except (FileNotFoundError, LoginException, ConnectionException, OSError) as exc:
             raise BridgeError("AUTH_FAILED", "The local Instaloader session could not be verified.") from exc
         if not username:
             raise BridgeError("AUTH_FAILED", "The local Instaloader session is not logged in.")
@@ -245,7 +245,7 @@ def _authenticate_loader(loader: Any, auth: Dict[str, Any]) -> Dict[str, Any]:
         with redirect_stdout(sys.stderr):
             import_session(auth["browser"].lower(), loader, auth["cookieFile"])
         username = loader.context.username or loader.test_login()
-    except (LoginException, ConnectionException, OSError) as exc:
+    except (LoginException, ConnectionException, OSError, ValueError) as exc:
         raise BridgeError("AUTH_FAILED", "Browser cookies could not be verified for Instagram.") from exc
     if not username:
         raise BridgeError("AUTH_FAILED", "Browser cookies did not provide a logged-in Instagram session.")
@@ -306,19 +306,21 @@ def _route_target(loader: Any, target: Dict[str, str], request: Dict[str, Any],
     value = target["value"]
 
     if target_type == "profile":
-        profile = Profile.from_username(loader.context, value)
+        profile = loader.check_profile_id(value, latest_stamps)
         loader.download_profiles(
-            {profile},
-            content["profilePic"],
-            content["posts"],
-            content["tagged"],
-            content["igtv"],
-            content["highlights"],
-            content["stories"],
-            filters["fastUpdate"],
-            post_filter,
-            story_filter,
+            profiles={profile},
+            profile_pic=content["profilePic"],
+            posts=content["posts"],
+            tagged=content["tagged"],
+            igtv=content["igtv"],
+            highlights=content["highlights"],
+            stories=content["stories"],
+            fast_update=filters["fastUpdate"],
+            post_filter=post_filter,
+            storyitem_filter=story_filter,
+            raise_errors=True,
             latest_stamps=latest_stamps,
+            max_count=filters["maxCount"],
             reels=content["reels"],
         )
     elif target_type == "hashtag":
@@ -334,8 +336,8 @@ def _route_target(loader: Any, target: Dict[str, str], request: Dict[str, Any],
         loader.download_post(Post.from_shortcode(loader.context, value), "-" + value)
     elif target_type == "feed":
         loader.download_feed_posts(
-            fast_update=filters["fastUpdate"],
             max_count=filters["maxCount"],
+            fast_update=filters["fastUpdate"],
             post_filter=post_filter,
         )
     elif target_type == "stories":
@@ -345,8 +347,8 @@ def _route_target(loader: Any, target: Dict[str, str], request: Dict[str, Any],
         )
     elif target_type == "saved":
         loader.download_saved_posts(
-            fast_update=filters["fastUpdate"],
             max_count=filters["maxCount"],
+            fast_update=filters["fastUpdate"],
             post_filter=post_filter,
         )
     else:
@@ -428,20 +430,23 @@ def emit_event(event: str, job_id: str, data: Dict[str, Any], stream: IO[str] = 
 
 def _handle_command(command: Dict[str, Any], job_id: str) -> int:
     command_name = command.get("command")
+    event_stream = sys.stdout
     if command_name == "validate":
         normalized = validate_download_request(command.get("request"))
-        emit_event("completed", job_id, {"request": normalized})
+        emit_event("completed", job_id, {"request": normalized}, stream=event_stream)
         return 0
     if command_name == "account_status":
-        status = check_account_status(command.get("auth"))
-        emit_event("completed", job_id, status)
+        with redirect_stdout(sys.stderr):
+            status = check_account_status(command.get("auth"))
+        emit_event("completed", job_id, status, stream=event_stream)
         return 0
     if command_name == "download":
-        result = execute_download(
-            command.get("request"),
-            event_sink=lambda event, data: emit_event(event, job_id, data),
-        )
-        emit_event("completed", job_id, result)
+        with redirect_stdout(sys.stderr):
+            result = execute_download(
+                command.get("request"),
+                event_sink=lambda event, data: emit_event(event, job_id, data, stream=event_stream),
+            )
+        emit_event("completed", job_id, result, stream=event_stream)
         return 0
     raise BridgeError("INVALID_REQUEST", "Unsupported bridge command.")
 
