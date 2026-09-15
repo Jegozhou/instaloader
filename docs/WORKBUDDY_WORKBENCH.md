@@ -33,7 +33,7 @@ Instagram / local filesystem
 5. 身份
 6. 验证并执行
 
-需要登录的目标或内容在匿名模式下会提前提示并阻止执行。
+需要登录的目标或内容在匿名模式下会提前提示并阻止执行。当前 Instaloader 4.15.x 中 Hashtag、Feed、Stories、Saved 目标需要登录。
 
 ### 任务中心
 
@@ -77,7 +77,7 @@ Instagram / local filesystem
 python -m instaloader.workbench_bridge
 ```
 
-stdin 接收一个 JSON 对象；stdout 只输出 JSON Lines 事件。普通诊断必须进入 stderr，避免破坏 Node 解析。
+stdin 接收一个 JSON 对象；stdout 只输出 JSON Lines 事件。普通 Instaloader 日志和诊断被重定向到 stderr，避免破坏 Node 解析。
 
 命令：
 
@@ -118,20 +118,21 @@ stdin 接收一个 JSON 对象；stdout 只输出 JSON Lines 事件。普通诊�
 - Node Bridge Runner 会对可能的 password/cookie/session 内容字段再次脱敏。
 - child stderr 有长度上限且不会作为用户可见结果回传。
 - Widget localStorage 只保存安全任务摘要和用户明确允许保留的路径。
-- 安装器不复制任何 session/Cookie 文件。
+- 安装器不会复制任何 session/Cookie 文件。
+- 构建产物自带 `workbuddy/python/instaloader` 源码；安装器把 `requests` 与 `browser_cookie3` 放进应用私有 Python 目录，不覆盖系统 Instaloader。
 
 ## 下载目标映射
 
 | 工作台目标 | Instaloader 操作 |
 |---|---|
-| Profile | `Profile.from_username()` + `download_profiles()` |
-| Hashtag | `download_hashtag()` |
+| Profile | `check_profile_id()` + `download_profiles()` |
+| Hashtag | `download_hashtag()`（当前版本需要登录） |
 | Shortcode | `Post.from_shortcode()` + `download_post()` |
 | Feed | `download_feed_posts()` |
 | Stories | `download_stories()` |
 | Saved | `download_saved_posts()` |
 
-Profile 的 Posts / Reels / Stories / Highlights / Tagged / IGTV 等复用 `download_profiles()` 已有参数。
+Profile 的 Posts / Reels / Stories / Highlights / Tagged / IGTV 等复用 `download_profiles()` 已有参数；`maxCount` 映射到 `max_count`，并启用 `raise_errors=True` 让工作台能够获得结构化失败结果。Profile 解析走 `check_profile_id()`，保留上游已有的 profile ID 与改名跟踪行为。
 
 ## 进度阶段
 
@@ -146,6 +147,20 @@ V1 固定使用以下阶段：
 
 当底层能够观察到项目计数时可以附加 counters，但不把阶段虚构成百分比。
 
+## 构建与运行时
+
+`npm run build` 生成：
+
+```text
+workbuddy/server.mjs
+workbuddy/widget.html
+workbuddy/python/instaloader/
+```
+
+Widget 使用显式 in-memory esbuild 输出并内联 JavaScript/CSS；构建时强制检查 `widget.html` 不超过 256 KiB。Server 在安装态优先使用 `workbuddy/python` 中的 Instaloader，在源码态回退到仓库根目录的 Python 包。
+
+安装器默认把下载工作目录设置为 `~/Downloads/Instaloader`，避免任务在 `~/.workbuddy/apps` 内产生媒体文件。任务显式指定输出目录时，以任务配置为准。
+
 ## 源码结构
 
 ```text
@@ -159,7 +174,7 @@ src/workbuddy/styles.css              本地样式
 agents/instagram-workbench/SKILL.md    WorkBuddy Skill
 scripts/build-workbuddy-app.mjs        生产构建
 scripts/install-workbuddy-app.*        安装器
-workbuddy/                             生产构建输出
+workbuddy/                             生产构建输出（含 Python runtime 源码）
 ```
 
 ## V1 明确不做
