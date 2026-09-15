@@ -17,7 +17,7 @@ git clone https://github.com/Jegozhou/instaloader.git
 cd instaloader
 git checkout feat/workbuddy-workbench
 
-npm install
+npm ci
 npm run build
 ```
 
@@ -44,6 +44,26 @@ powershell -ExecutionPolicy Bypass -File .\scripts\install-workbuddy-app.ps1
 7. 在 MCP Server 环境中记录 Python 可执行文件路径和默认下载目录，随后执行本机 Bridge 导入与 Node Server 语法自检。
 
 安装器**不会**读取、复制或上传 Instaloader session 文件、浏览器 Cookie、Instagram 密码或下载内容。Session/Cookie 文件只有在你主动选择相应身份模式时，才由本机 Python Bridge 按路径访问。
+
+## 使用发布包
+
+仓库的 `WorkBuddy Release Package` workflow 会生成可移植 ZIP。发布 staging 也可以在源码目录中手动生成：
+
+```bash
+npm ci
+npm run build
+npm run package:workbuddy
+```
+
+输出目录为：
+
+```text
+dist/workbuddy-instagram-workbench/
+```
+
+该目录只包含运行 WorkBuddy 工作台所需的白名单文件：MCP Server、Widget、应用私有 Instaloader Python 源码、Skill、插件清单、安装/卸载脚本、许可与安装文档。它不会包含用户 Session、Cookie、下载目录或其他本机凭据。
+
+ZIP 解压后，在解压目录内运行对应平台的安装脚本即可。
 
 ## 启动
 
@@ -98,6 +118,22 @@ Instaloader CLI 原本支持的其他目标仍可以继续通过命令行使用�
 
 Windows 对应用户目录下的 `Downloads\Instaloader`。任务中显式填写保存目录时，以任务配置为准。
 
+## 卸载
+
+macOS / Linux：
+
+```bash
+bash scripts/uninstall-workbuddy-app.sh
+```
+
+Windows PowerShell：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\uninstall-workbuddy-app.ps1
+```
+
+卸载器只移除 `instagram-workbench` 应用目录、对应 Skill 与 `.mcp.json` 中同名 MCP Server 条目。修改配置前会创建备份；不会删除下载文件、Session/Cookie 文件，也不会删除其他 MCP Server 配置。两个卸载器都支持先检查路径而不执行删除：POSIX 使用 `--dry-run`，PowerShell 使用 `-DryRun`。
+
 ## 开发验证
 
 Python Bridge 单元测试：
@@ -109,7 +145,7 @@ python -m unittest discover -s test -p 'test_workbench_bridge*.py' -v
 WorkBuddy 构建与 Node 测试：
 
 ```bash
-npm install
+npm ci
 npm run build
 npm run test:node
 node --check workbuddy/server.mjs
@@ -121,7 +157,9 @@ node --check workbuddy/server.mjs
 npm run check
 ```
 
-仓库中的 `.github/workflows/workbuddy.yml` 会执行 Python Bridge 测试、WorkBuddy 构建、Node 契约/产物测试、Bundled Python Bridge 导入检查和 Server 语法检查。
+仓库中的 `.github/workflows/workbuddy.yml` 会使用已提交的 `package-lock.json` 通过 `npm ci` 安装依赖，并执行 Python Bridge 测试、WorkBuddy 构建、Node 契约/产物测试、Bundled Python Bridge 导入检查和 Server 语法检查。
+
+`.github/workflows/workbuddy-release.yml` 会在 Linux 与 Windows 干净 runner 上实际安装并卸载 staging 包，验证它不会覆盖无关 MCP 配置或删除用户下载；Linux job 还会生成可下载的发布 ZIP artifact。
 
 ## 排障
 
@@ -130,7 +168,7 @@ npm run check
 源码仓库需要先执行：
 
 ```bash
-npm install
+npm ci
 npm run build
 ```
 
