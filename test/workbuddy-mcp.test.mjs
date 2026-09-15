@@ -55,6 +55,34 @@ test('runBridge parses JSONL and keeps the terminal event', async () => {
 })
 
 
+test('runBridge forwards isolated cwd and environment to the Python child', async () => {
+  let invocation
+  const spawnImpl = (command, args, options) => {
+    invocation = { command, args, options }
+    return fakeSpawn({
+      stdout: `${JSON.stringify({ event: 'completed', jobId: '1', data: { ok: true } })}\n`,
+    })()
+  }
+
+  await runBridge(
+    { command: 'validate', request: {} },
+    {
+      python: '/custom/python',
+      cwd: '/tmp/workbench-output',
+      env: { PYTHONPATH: '/tmp/workbench-python', WORKBENCH_TEST: '1' },
+      spawnImpl,
+    },
+  )
+
+  assert.equal(invocation.command, '/custom/python')
+  assert.deepEqual(invocation.args, ['-m', 'instaloader.workbench_bridge'])
+  assert.equal(invocation.options.cwd, '/tmp/workbench-output')
+  assert.equal(invocation.options.env.PYTHONPATH, '/tmp/workbench-python')
+  assert.equal(invocation.options.env.WORKBENCH_TEST, '1')
+  assert.equal(invocation.options.stdio[0], 'pipe')
+})
+
+
 test('runBridge bounds event history while retaining final event', async () => {
   const result = await runBridge(
     { command: 'download', request: {} },
