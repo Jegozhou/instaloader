@@ -8,9 +8,11 @@ const MAX_WIDGET_BYTES = 256 * 1024
 test('production WorkBuddy build is self-contained and within widget size limit', async () => {
   const widgetPath = new URL('../workbuddy/widget.html', import.meta.url)
   const serverPath = new URL('../workbuddy/server.mjs', import.meta.url)
-  const [widget, server, widgetStat] = await Promise.all([
+  const bridgePath = new URL('../workbuddy/python/instaloader/workbench_bridge.py', import.meta.url)
+  const [widget, server, bridge, widgetStat] = await Promise.all([
     readFile(widgetPath, 'utf8'),
     readFile(serverPath, 'utf8'),
+    readFile(bridgePath, 'utf8'),
     stat(widgetPath),
   ])
 
@@ -21,4 +23,5 @@ test('production WorkBuddy build is self-contained and within widget size limit'
 
   assert.match(server, /ui:\/\/instagram-workbench\/dashboard/)
   assert.match(server, /text\/html;profile=mcp-app/)
+  assert.match(bridge, /Structured JSONL bridge between WorkBuddy and the Instaloader Python API/)
 })
