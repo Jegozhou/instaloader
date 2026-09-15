@@ -1,4 +1,4 @@
-const LOGIN_REQUIRED_TARGETS = new Set(['feed', 'stories', 'saved'])
+const LOGIN_REQUIRED_TARGETS = new Set(['hashtag', 'feed', 'stories', 'saved'])
 const LOGIN_REQUIRED_CONTENT = new Set(['stories', 'highlights', 'comments', 'geotags'])
 
 export const SUPPORTED_TARGETS = Object.freeze([
