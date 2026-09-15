@@ -6,6 +6,7 @@ import test from 'node:test'
 
 import { runBridge, redactSecrets } from '../src/workbuddy/bridge-runner.mjs'
 import { APP_MIME, APP_URI, TOOL_NAMES } from '../src/workbuddy/contract.mjs'
+import { createServer } from '../src/workbuddy/server.mjs'
 
 
 function fakeSpawn({ stdout = '', stderr = '', code = 0 }) {
@@ -33,6 +34,18 @@ test('MCP contract uses the WorkBuddy app resource and four tools', () => {
     'instagram_account_status',
     'instagram_start_download',
   ])
+})
+
+
+test('MCP SDK accepts all WorkBuddy tool and resource registrations', () => {
+  const server = createServer({
+    widgetHtml: '<!doctype html><div id="root"></div>',
+    runBridge: async () => ({
+      events: [{ event: 'completed', jobId: 'test', data: { ok: true } }],
+      final: { event: 'completed', jobId: 'test', data: { ok: true } },
+    }),
+  })
+  assert.equal(typeof server.connect, 'function')
 })
 
 
