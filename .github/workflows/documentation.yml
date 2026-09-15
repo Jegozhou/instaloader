@@ -11,6 +11,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # needed for building docs
+      - name: "Fetch Upstream Tags For Forks"
+        if: github.repository != 'instaloader/instaloader'
+        run: git fetch --force https://github.com/instaloader/instaloader.git '+refs/tags/*:refs/tags/*'
       - name: "Setup Python"
         uses: actions/setup-python@v5
         with:

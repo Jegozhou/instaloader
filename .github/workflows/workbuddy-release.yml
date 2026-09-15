@@ -1,0 +1,177 @@
+name: WorkBuddy Release Package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'workbuddy-v*'
+  pull_request:
+    paths:
+      - 'workbuddy/**'
+      - 'src/workbuddy/**'
+      - 'agents/instagram-workbench/**'
+      - 'scripts/*workbuddy*'
+      - 'docs/INSTALL_WORKBUDDY.md'
+      - 'docs/WORKBUDDY_WORKBENCH.md'
+      - 'test/workbuddy-*.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'build.mjs'
+      - '.mcp.json'
+      - '.codebuddy-plugin/**'
+      - '.github/workflows/workbuddy-release.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package-linux:
+    name: Package and smoke test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install WorkBuddy dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build WorkBuddy app
+        run: npm run build
+
+      - name: Stage portable WorkBuddy release
+        run: npm run package:workbuddy
+
+      - name: Verify release layout
+        run: |
+          test -f dist/workbuddy-instagram-workbench/release-manifest.json
+          test -f dist/workbuddy-instagram-workbench/workbuddy/server.mjs
+          test -f dist/workbuddy-instagram-workbench/workbuddy/widget.html
+          test -f dist/workbuddy-instagram-workbench/workbuddy/python/instaloader/workbench_bridge.py
+          test -f dist/workbuddy-instagram-workbench/agents/instagram-workbench/SKILL.md
+          test -f dist/workbuddy-instagram-workbench/scripts/install-workbuddy-app.sh
+          test -f dist/workbuddy-instagram-workbench/scripts/uninstall-workbuddy-app.sh
+
+      - name: Install and uninstall smoke test
+        env:
+          WORKBUDDY_HOME: ${{ runner.temp }}/workbuddy-home
+          INSTALOADER_WORKBENCH_CWD: ${{ runner.temp }}/workbuddy-downloads
+        run: |
+          mkdir -p "$WORKBUDDY_HOME" "$INSTALOADER_WORKBENCH_CWD"
+          cat > "$WORKBUDDY_HOME/.mcp.json" <<'JSON'
+          {
+            "mcpServers": {
+              "keep-me": {
+                "command": "node",
+                "args": ["keep-me.mjs"]
+              }
+            }
+          }
+          JSON
+          printf 'preserve-me\n' > "$INSTALOADER_WORKBENCH_CWD/sentinel.txt"
+
+          bash dist/workbuddy-instagram-workbench/scripts/install-workbuddy-app.sh
+          test -f "$WORKBUDDY_HOME/apps/instagram-workbench/server.mjs"
+          test -f "$WORKBUDDY_HOME/apps/instagram-workbench/python/instaloader/workbench_bridge.py"
+          test -f "$WORKBUDDY_HOME/skills/instagram-workbench/SKILL.md"
+          node --input-type=module - "$WORKBUDDY_HOME/.mcp.json" <<'NODE'
+          import { readFile } from 'node:fs/promises'
+          const config = JSON.parse(await readFile(process.argv[2], 'utf8'))
+          if (!config.mcpServers?.['instagram-workbench']) throw new Error('installer did not register instagram-workbench')
+          if (!config.mcpServers?.['keep-me']) throw new Error('installer removed an unrelated MCP entry')
+          NODE
+
+          bash dist/workbuddy-instagram-workbench/scripts/uninstall-workbuddy-app.sh
+          test ! -e "$WORKBUDDY_HOME/apps/instagram-workbench"
+          test ! -e "$WORKBUDDY_HOME/skills/instagram-workbench"
+          test -f "$INSTALOADER_WORKBENCH_CWD/sentinel.txt"
+          node --input-type=module - "$WORKBUDDY_HOME/.mcp.json" <<'NODE'
+          import { readFile } from 'node:fs/promises'
+          const config = JSON.parse(await readFile(process.argv[2], 'utf8'))
+          if (config.mcpServers?.['instagram-workbench']) throw new Error('uninstaller left instagram-workbench registered')
+          if (!config.mcpServers?.['keep-me']) throw new Error('uninstaller removed an unrelated MCP entry')
+          NODE
+
+      - name: Create release ZIP
+        id: archive
+        shell: bash
+        run: |
+          archive="instaloader-workbuddy-${GITHUB_SHA::12}.zip"
+          cd dist
+          python -m zipfile -c "$archive" workbuddy-instagram-workbench
+          echo "path=dist/$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.archive.outputs.path }}
+          archive: false
+          if-no-files-found: error
+          retention-days: 14
+
+  smoke-windows:
+    name: Install and uninstall smoke test (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install WorkBuddy dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build and stage WorkBuddy release
+        run: |
+          npm run build
+          npm run package:workbuddy
+
+      - name: Install and uninstall smoke test
+        shell: pwsh
+        run: |
+          $env:WORKBUDDY_HOME = Join-Path $env:RUNNER_TEMP 'workbuddy-home'
+          $env:INSTALOADER_WORKBENCH_CWD = Join-Path $env:RUNNER_TEMP 'workbuddy-downloads'
+          New-Item -ItemType Directory -Force -Path $env:WORKBUDDY_HOME, $env:INSTALOADER_WORKBENCH_CWD | Out-Null
+          @'
+          {
+            "mcpServers": {
+              "keep-me": {
+                "command": "node",
+                "args": ["keep-me.mjs"]
+              }
+            }
+          }
+          '@ | Set-Content (Join-Path $env:WORKBUDDY_HOME '.mcp.json') -Encoding utf8
+          'preserve-me' | Set-Content (Join-Path $env:INSTALOADER_WORKBENCH_CWD 'sentinel.txt') -Encoding utf8
+
+          & .\dist\workbuddy-instagram-workbench\scripts\install-workbuddy-app.ps1
+          if (!(Test-Path (Join-Path $env:WORKBUDDY_HOME 'apps\instagram-workbench\server.mjs'))) { throw 'server.mjs was not installed' }
+          if (!(Test-Path (Join-Path $env:WORKBUDDY_HOME 'skills\instagram-workbench\SKILL.md'))) { throw 'Skill was not installed' }
+          $InstalledConfig = Get-Content (Join-Path $env:WORKBUDDY_HOME '.mcp.json') -Raw | ConvertFrom-Json
+          if ($null -eq $InstalledConfig.mcpServers.'instagram-workbench') { throw 'installer did not register instagram-workbench' }
+          if ($null -eq $InstalledConfig.mcpServers.'keep-me') { throw 'installer removed an unrelated MCP entry' }
+
+          & .\dist\workbuddy-instagram-workbench\scripts\uninstall-workbuddy-app.ps1
+          if (Test-Path (Join-Path $env:WORKBUDDY_HOME 'apps\instagram-workbench')) { throw 'app directory remains after uninstall' }
+          if (Test-Path (Join-Path $env:WORKBUDDY_HOME 'skills\instagram-workbench')) { throw 'Skill directory remains after uninstall' }
+          if (!(Test-Path (Join-Path $env:INSTALOADER_WORKBENCH_CWD 'sentinel.txt'))) { throw 'uninstaller removed user downloads' }
+          $UninstalledConfig = Get-Content (Join-Path $env:WORKBUDDY_HOME '.mcp.json') -Raw | ConvertFrom-Json
+          if ($null -ne $UninstalledConfig.mcpServers.'instagram-workbench') { throw 'uninstaller left instagram-workbench registered' }
+          if ($null -eq $UninstalledConfig.mcpServers.'keep-me') { throw 'uninstaller removed an unrelated MCP entry' }

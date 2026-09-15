@@ -25,7 +25,6 @@
 
 .. |downloads| image:: https://pepy.tech/badge/instaloader/month
    :alt: PyPI Download Count
-   :target: https://pepy.tech/project/instaloader
 
 .. badges-end
 
@@ -58,6 +57,41 @@
                 profile | "#hashtag" | :stories | :feed | :saved
 
 `Instaloader Documentation <https://instaloader.github.io/>`__
+
+WorkBuddy Instagram 下载工作台
+------------------------------
+
+This fork also includes an optional native **WorkBuddy MCP App** that exposes the
+existing Instaloader engine through a local graphical workbench. The original
+Python API and ``instaloader`` CLI remain available and unchanged.
+
+The WorkBuddy app supports anonymous mode, existing Instaloader session files,
+and local browser-cookie reuse. It **does not provide or store an Instagram
+password field**.
+
+From this source branch, install the locked Node dependencies and build the local
+MCP App with::
+
+    npm ci
+    npm run build
+
+To create the same portable staging directory used by the release workflow, run::
+
+    npm run package:workbuddy
+
+Then install it into WorkBuddy with::
+
+    bash scripts/install-workbuddy-app.sh
+
+On Windows, use::
+
+    powershell -ExecutionPolicy Bypass -File .\scripts\install-workbuddy-app.ps1
+
+The repository also includes matching uninstall scripts. After restarting
+WorkBuddy, enter ``打开 Instagram 下载工作台``. See
+``docs/INSTALL_WORKBUDDY.md`` for installation, uninstallation, release-package
+and security details and ``docs/WORKBUDDY_WORKBENCH.md`` for the architecture and
+supported targets.
 
 
 How to Automatically Download Pictures from Instagram

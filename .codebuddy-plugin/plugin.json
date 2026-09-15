@@ -1,0 +1,23 @@
+{
+  "name": "workbuddy-instagram-workbench",
+  "version": "1.0.0",
+  "description": "基于 Instaloader 的本机 Instagram 下载工作台：可视化配置目标、身份、筛选、保存规则和任务结果。",
+  "author": {
+    "name": "Jegozhou"
+  },
+  "homepage": "https://github.com/Jegozhou/instaloader",
+  "repository": "https://github.com/Jegozhou/instaloader",
+  "license": "MIT",
+  "keywords": [
+    "workbuddy",
+    "instaloader",
+    "instagram",
+    "mcp-app",
+    "downloader"
+  ],
+  "category": "productivity",
+  "skills": [
+    "./agents/instagram-workbench"
+  ],
+  "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "instagram-workbench": {
+      "command": "node",
+      "args": [
+        "${CODEBUDDY_PLUGIN_ROOT}/workbuddy/server.mjs"
+      ]
+    }
+  }
+}

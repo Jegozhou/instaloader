@@ -1,0 +1,71 @@
+name: WorkBuddy Workbench
+
+on:
+  push:
+    branches:
+      - feat/workbuddy-workbench
+  pull_request:
+    paths:
+      - 'instaloader/workbench_bridge.py'
+      - 'src/workbuddy/**'
+      - 'workbuddy/**'
+      - 'agents/instagram-workbench/**'
+      - 'scripts/*workbuddy*'
+      - 'test/test_workbench_bridge*.py'
+      - 'test/workbuddy-*.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'build.mjs'
+      - '.mcp.json'
+      - '.codebuddy-plugin/**'
+      - '.github/workflows/workbuddy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python package
+        run: python -m pip install -e '.[browser_cookie3]'
+
+      - name: Test WorkBuddy Python bridge
+        run: python -m unittest discover -s test -p 'test_workbench_bridge*.py' -v
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install WorkBuddy dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build WorkBuddy app
+        run: npm run build
+
+      - name: Test WorkBuddy contracts and build output
+        run: npm run test:node
+
+      - name: Verify bundled Python bridge import
+        run: |
+          cd /tmp
+          PYTHONPATH="$GITHUB_WORKSPACE/workbuddy/python" python -c "import instaloader.workbench_bridge as wb; print(wb.__file__)"
+
+      - name: Check built server syntax
+        run: node --check workbuddy/server.mjs
+
+      - name: Verify no remote widget assets
+        run: |
+          if grep -Eiq '<script[^>]+src=|<link[^>]+href=' workbuddy/widget.html; then
+            echo 'Remote widget asset reference found.' >&2
+            exit 1
+          fi
