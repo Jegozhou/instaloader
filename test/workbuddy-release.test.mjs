@@ -61,6 +61,19 @@ test('installers merge only the named MCP entry and do not copy auth material', 
 })
 
 
+test('release packaging has a portable staging command and uninstallers', () => {
+  const packageJson = json('package.json')
+  assert.equal(packageJson.scripts['package:workbuddy'], 'node scripts/package-workbuddy-release.mjs')
+  for (const path of [
+    'scripts/package-workbuddy-release.mjs',
+    'scripts/uninstall-workbuddy-app.sh',
+    'scripts/uninstall-workbuddy-app.ps1',
+  ]) {
+    assert.equal(existsSync(new URL(`../${path}`, import.meta.url)), true, `${path} must exist`)
+  }
+})
+
+
 test('built widget has no remote script or stylesheet references when artifacts exist', () => {
   const widgetUrl = new URL('../workbuddy/widget.html', import.meta.url)
   if (!existsSync(widgetUrl)) return
