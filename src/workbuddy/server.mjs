@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
+import { delimiter, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
@@ -9,7 +9,8 @@ import { runBridge } from './bridge-runner.mjs'
 import { APP_MIME, APP_URI } from './contract.mjs'
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url))
-const pluginRoot = resolve(currentDirectory, '..')
+const sourceRoot = resolve(currentDirectory, '..')
+const bundledPythonRoot = join(currentDirectory, 'python')
 const APP_ONLY_META = { ui: { resourceUri: APP_URI, visibility: ['app'] } }
 
 const AuthShape = {
@@ -70,10 +71,20 @@ function toolResult(result, successText) {
   }
 }
 
+function bridgeOptions() {
+  const bundledBridge = join(bundledPythonRoot, 'instaloader', 'workbench_bridge.py')
+  const pythonRoot = existsSync(bundledBridge) ? bundledPythonRoot : sourceRoot
+  const pythonPath = [pythonRoot, process.env.PYTHONPATH].filter(Boolean).join(delimiter)
+  return {
+    cwd: process.env.INSTALOADER_WORKBENCH_CWD || sourceRoot,
+    env: { PYTHONPATH: pythonPath },
+  }
+}
+
 export function createServer(options = {}) {
   const widgetHtml = options.widgetHtml
     || readFileSync(options.widgetPath || join(currentDirectory, 'widget.html'), 'utf8')
-  const run = options.runBridge || ((command) => runBridge(command, { cwd: pluginRoot }))
+  const run = options.runBridge || ((command) => runBridge(command, bridgeOptions()))
   const server = new McpServer({ name: 'workbuddy-instagram-workbench', version: '1.0.0' })
 
   server.registerTool('show_instagram_workbench', {
